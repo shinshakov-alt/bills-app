@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="theme-color" content="#f8fafc" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Контроль счетов" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="icon" href="./icon-192.png" />
+  <title>Контроль счетов</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .bill-card {
+      transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .bill-card-overdue {
+      background-color: #fef2f2;
+      border-color: #fca5a5;
+    }
+
+    @keyframes overdueGreenRedPulse {
+      0%, 49.9% {
+        background-color: #f0fdf4;
+        border-color: #bbf7d0;
+      }
+      50%, 100% {
+        background-color: #fef2f2;
+        border-color: #fca5a5;
+      }
+    }
+
+    .kpi-nearest-overdue {
+      animation: overdueGreenRedPulse 1s linear infinite;
+    }
+
+    .bill-card.removing {
+      opacity: 0;
+      transform: translateX(10px) scale(0.99);
+      pointer-events: none;
+    }
+
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-up {
+      animation: fadeSlideUp 0.2s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-20">
+
+  <!-- Тост-уведомление -->
+  <div
+    id="toast"
+    role="status"
+    aria-live="polite"
+    class="fixed bottom-5 right-5 z-50 pointer-events-none opacity-0 translate-y-2 transition-all duration-200 max-w-[calc(100vw-2.5rem)]"
+  >
+    <div class="bg-slate-900 text-white text-xs sm:text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 border border-slate-700/70">
+      <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+      <span id="toast-text" class="truncate">Готово</span>
+    </div>
+  </div>
+
+  <!-- Модальное окно добавления счёта вручную -->
+  <div
+    id="add-bill-modal"
+    class="hidden fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-0 sm:p-4"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl border border-slate-200 shadow-2xl p-5 sm:p-6 space-y-4 animate-fade-up max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h2 class="text-lg font-bold text-slate-900">Добавить счёт вручную</h2>
+        <button
+          type="button"
+          onclick="closeAddModal()"
+          aria-label="Закрыть"
+          class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <form id="add-bill-form" onsubmit="handleAddBillSubmit(event)" class="space-y-3.5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label for="bill-category" class="block text-xs font-semibold text-slate-700 mb-1">Категория *</label>
+            <select
+              id="bill-category"
+              required
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
+            >
+              <option value="electricity">⚡ Электричество</option>
+              <option value="telecom">📱 Связь и интернет</option>
+              <option value="insurance">🛡️ Страховка</option>
+              <option value="other">🧾 Другие счета</option>
+            </select>
+          </div>
+          <div>
+            <label for="bill-amount" class="block text-xs font-semibold text-slate-700 mb-1">Сумма (€) *</label>
+            <input
+              id="bill-amount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              required
+              placeholder="0.00"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 tabular-nums focus:bg-white focus:border-blue-400 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label for="bill-provider" class="block text-xs font-semibold text-slate-700 mb-1">Поставщик *</label>
+            <input
+              id="bill-provider"
+              type="text"
+              required
+              placeholder="Например, Enefit OÜ"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label for="bill-number" class="block text-xs font-semibold text-slate-700 mb-1">Номер счёта *</label>
+            <input
+              id="bill-number"
+              type="text"
+              required
+              placeholder="Например, 123456789"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label for="bill-due" class="block text-xs font-semibold text-slate-700 mb-1">Срок оплаты</label>
+            <input
+              id="bill-due"
+              type="date"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label for="bill-viitenumber" class="block text-xs font-semibold text-slate-700 mb-1">Viitenumber</label>
+            <input
+              id="bill-viitenumber"
+              type="text"
+              placeholder="Номер ссылки"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label for="bill-object" class="block text-xs font-semibold text-slate-700 mb-1">Объект или описание</label>
+          <input
+            id="bill-object"
+            type="text"
+            placeholder="Адрес, договор или назначение платежа"
+            class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
+          />
+        </div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+          <button
+            type="button"
+            onclick="closeAddModal()"
+            class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+          >
+            Отмена
+          </button>
+          <button
+            type="submit"
+            class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            Сохранить
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно подключения URL скрипта -->
+  <div
+    id="gas-code-modal"
+    class="hidden fixed inset-0 z-40 bg-slate-900/45 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-0 sm:p-4"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl border border-slate-200 shadow-2xl p-5 sm:p-6 space-y-4 animate-fade-up max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-slate-900">Подключение скрипта Gmail</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Вставьте ссылку веб-приложения (<span class="font-mono">.../exec</span>)</p>
+        </div>
+        <button
+          type="button"
+          onclick="closeGasModal()"
+          aria-label="Закрыть"
+          class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <form onsubmit="saveGasUrl(event)" class="space-y-4">
+        <div>
+          <label for="gas-url-input" class="block text-xs font-semibold text-slate-700 mb-1.5">URL скрипта</label>
+          <input
+            id="gas-url-input"
+            type="url"
+            required
+            placeholder="https://script.google.com/macros/s/.../exec"
+            class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-xs sm:text-sm font-mono text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
+          />
+          <p class="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+            Ссылка сохранится в браузере. При нажатии «Оплачено» в Gmail будет ставиться метка <strong class="text-slate-700">«Оплачено»</strong>.
+          </p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+          <button
+            type="button"
+            onclick="closeGasModal()"
+            class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+          >
+            Отмена
+          </button>
+          <button
+            type="submit"
+            class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            Сохранить и проверить
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-9 space-y-6">
+
+    <!-- Шапка -->
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <div class="flex flex-wrap items-center gap-2.5">
+          <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            🧾 Контроль счетов
+          </h1>
+          <span id="connection-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span id="connection-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span id="connection-text">Готово</span>
+          </span>
+        </div>
+        <p id="header-subtitle" class="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+          Период: с 01.11.2026 &middot; Gmail ещё не проверялся
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          id="sync-gmail-btn"
+          type="button"
+          onclick="syncFromGmail()"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-all cursor-pointer"
+        >
+          <svg id="sync-icon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>Проверить Gmail</span>
+        </button>
+
+        <button
+          type="button"
+          onclick="openAddModal()"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer"
+        >
+          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>Добавить</span>
+        </button>
+
+        <button
+          type="button"
+          onclick="openGasModal()"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100/80 transition-all cursor-pointer"
+        >
+          <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          <span>URL скрипта</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Карточки KPI -->
+    <section aria-label="Показатели" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="rounded-2xl bg-[#eff6ff] border border-[#bfdbfe] p-5">
+        <div class="flex items-center justify-between mb-2.5">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold uppercase tracking-wider bg-[#dbeafe] text-[#1e40af] border border-[#bfdbfe]">
+            К оплате
+          </span>
+          <span class="text-sm font-semibold text-[#1e40af]">€</span>
+        </div>
+        <div id="kpi-total-amount" class="text-2xl sm:text-3xl font-bold text-slate-900 tabular-nums">
+          17.61 €
+        </div>
+        <p class="text-xs text-[#1e40af]/80 mt-1 font-medium">Сумма активных неоплаченных счетов</p>
+      </div>
+
+      <div class="rounded-2xl bg-[#fef2f2] border border-[#fecaca] p-5">
+        <div class="flex items-center justify-between mb-2.5">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold uppercase tracking-wider bg-[#fee2e2] text-[#991b1b] border border-[#fecaca]">
+            Неоплачено счетов
+          </span>
+          <span class="text-sm font-semibold text-[#991b1b]">📄</span>
+        </div>
+        <div id="kpi-unpaid-count" class="text-2xl sm:text-3xl font-bold text-slate-900 tabular-nums">
+          2
+        </div>
+        <p id="kpi-overdue-hint" class="text-xs text-[#991b1b]/85 mt-1 font-medium">Просрочено: 2 счёта</p>
+      </div>
+
+      <div id="kpi-nearest-card" class="rounded-2xl bg-[#f0fdf4] border border-[#bbf7d0] p-5 transition-colors">
+        <div class="flex items-center justify-between mb-2.5">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold uppercase tracking-wider bg-[#dcfce7] text-[#166534] border border-[#bbf7d0]">
+            Ближайший срок
+          </span>
+          <span class="text-sm font-semibold text-[#166534]">🗓</span>
+        </div>
+        <div id="kpi-nearest-due" class="text-2xl sm:text-3xl font-bold text-slate-900 tabular-nums">
+          17.11.2026
+        </div>
+        <p id="kpi-session-summary" class="text-xs text-[#166534]/85 mt-1 font-medium tabular-nums">
+          Недавно оплачено: 0 счетов (0.00 €)
+        </p>
+      </div>
+    </section>
+
+    <!-- Поиск и фильтры -->
+    <section aria-label="Поиск и фильтры" class="rounded-2xl bg-white border border-slate-200/90 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="relative flex-1 min-w-0">
+        <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="M21 21l-4.35-4.35"></path>
+        </svg>
+        <input
+          id="search-input"
+          type="search"
+          oninput="handleSearchInput(this.value)"
+          placeholder="Поиск по поставщику, номеру счёта, адресу или viitenumber..."
+          class="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3.5 py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-400 focus:outline-none"
+        />
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button
+          id="filter-overdue-btn"
+          type="button"
+          onclick="toggleOverdueFilter()"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+        >
+          <span class="w-2 h-2 rounded-full bg-red-500"></span>
+          <span>Только просроченные</span>
+        </button>
+
+        <button
+          type="button"
+          onclick="toggleAllCategories()"
+          id="toggle-all-btn"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+        >
+          <span>Развернуть все</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Список категорий -->
+    <main id="categories-container" class="space-y-4"></main>
+
+    <!-- Пустое состояние -->
+    <div id="empty-state" class="hidden rounded-2xl bg-white border border-slate-200/90 p-8 sm:p-10 text-center animate-fade-up">
+      <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center text-xl mx-auto mb-3">
+        ✓
+      </div>
+      <h2 id="empty-state-title" class="text-lg sm:text-xl font-bold text-slate-900">Все счета за текущий месяц оплачены</h2>
+      <p id="empty-state-desc" class="text-xs sm:text-sm text-slate-500 mt-1 max-w-md mx-auto">
+        Письма отмечены меткой «Оплачено» в Gmail и не появятся при следующих проверках.
+      </p>
+    </div>
+
+    <!-- Недавно оплаченные (30 дней) -->
+    <section id="session-paid-panel" class="hidden rounded-2xl bg-white border border-slate-200/90 p-5 sm:p-6 animate-fade-up">
+      <div class="flex items-center justify-between gap-3 pb-4 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <h2 class="text-base sm:text-lg font-bold text-slate-900">
+            Недавно оплаченные
+          </h2>
+          <span id="session-paid-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 tabular-nums">
+            0
+          </span>
+        </div>
+      </div>
+      <ul id="session-paid-list" class="divide-y divide-slate-100 mt-2"></ul>
+    </section>
+
+    <!-- Подвал -->
+    <footer class="rounded-2xl bg-white border border-slate-200/90 px-4 sm:px-6 py-4 text-xs sm:text-sm text-slate-600 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+      <div class="font-semibold text-slate-900">
+        Контроль проверки
+      </div>
+      <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+        <span>Период поиска: <strong id="footer-period" class="font-semibold text-slate-900">не синхронизировано</strong></span>
+        <span class="text-slate-300">&middot;</span>
+        <span>Найдено счетов: <strong id="footer-total-bills" class="font-semibold text-slate-900">0 на 0.00 €</strong></span>
+        <span class="text-slate-300">&middot;</span>
+        <span>Дубликаты: <strong id="footer-duplicates" class="font-semibold text-slate-900">—</strong></span>
+        <span class="text-slate-300">&middot;</span>
+        <span>Требуют проверки: <strong id="footer-review" class="font-semibold text-slate-900">0</strong></span>
+      </div>
+    </footer>
+
+  </div>
+
+  <textarea id="clipboard-helper" class="fixed -top-96 left-0 opacity-0 pointer-events-none" aria-hidden="true"></textarea>
+
+  <script>
+    const GAS_URL_STORAGE_KEY = 'personal_bills_gas_endpoint_url';
+    const STORAGE_KEY = 'personal_bills_gas_v5_clean';
+    const OLD_STORAGE_KEYS = ['personal_bills_gas_v4_2026_11_25', 'personal_bills_gas_v3_2026_11'];
+    const PAID_KEEP_DAYS = 30;
+    function todayIso() {
+      const now = new Date();
+      return new Date(now - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    }
+    let currentReferenceDate = todayIso();
+    let syncMeta = {};
+    let isSyncing = false;
+    const pendingIds = new Set();
+
+    // Пустой стартовый список: счета загружаются из Gmail по URL скрипта
+    const fallbackBills = [];
+
+    const categoriesConfig = [
+      { id: 'electricity', title: '⚡ Электричество' },
+      { id: 'telecom', title: '📱 Связь и интернет' },
+      { id: 'insurance', title: '🛡️ Страховка' },
+      { id: 'other', title: '🧾 Другие счета' },
+    ];
+
+    let activeBills = [];
+    let paidSessionBills = [];
+    let searchQuery = '';
+    let onlyOverdueFilter = false;
+    let toastTimeout = null;
+    const collapsedCategories = new Set(categoriesConfig.map((c) => c.id));
+
+    function formatEuro(val) {
+      return `${Number(val).toFixed(2)} €`;
+    }
+
+    function pluralizeBills(count) {
+      const mod10 = count % 10;
+      const mod100 = count % 100;
+      if (mod10 === 1 && mod100 !== 11) return `${count} счёт`;
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return `${count} счёта`;
+      return `${count} счетов`;
+    }
+
+    function isBillOverdue(bill, refDateIso) {
+      if (!bill || !bill.dueSort || !refDateIso) return false;
+      return bill.dueSort < refDateIso;
+    }
+
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function parseAmount(value) {
+      const n = Number(String(value ?? '').replace(/\s/g, '').replace(',', '.'));
+      return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+    }
+
+    // Приводит счёт к безопасному виду: сумма числом, категория из списка
+    function normalizeBill(bill) {
+      if (!bill || bill.id == null) return null;
+      const amount = parseAmount(bill.amount);
+      if (amount === null || amount <= 0) return null;
+      const known = categoriesConfig.some((c) => c.id === bill.categoryId);
+      return {
+        ...bill,
+        id: String(bill.id),
+        amount,
+        categoryId: known ? bill.categoryId : 'other',
+        provider: String(bill.provider || 'Поставщик не указан'),
+        invoiceNumber: String(bill.invoiceNumber || '—'),
+      };
+    }
+
+    function legacyCopy(text) {
+      const helper = document.getElementById('clipboard-helper');
+      if (!helper) return false;
+      helper.value = text;
+      helper.select();
+      helper.setSelectionRange(0, 99999);
+      try {
+        return document.execCommand('copy');
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function copyTextToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (e) {
+        return legacyCopy(text);
+      }
+    }
+
+    function updateConnectionStatus(state, labelText) {
+      const badge = document.getElementById('connection-badge');
+      const dot = document.getElementById('connection-dot');
+      const text = document.getElementById('connection-text');
+      if (!badge || !dot || !text) return;
+
+      text.textContent = labelText;
+      badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border';
+      dot.className = 'w-1.5 h-1.5 rounded-full';
+
+      if (state === 'connected') {
+        badge.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+        dot.classList.add('bg-emerald-500');
+      } else if (state === 'syncing') {
+        badge.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
+        dot.classList.add('bg-blue-500', 'animate-pulse');
+      } else {
+        badge.classList.add('bg-amber-50', 'text-amber-800', 'border-amber-200');
+        dot.classList.add('bg-amber-500');
+      }
+    }
+
+    function getGasApiUrl() {
+      try {
+        return localStorage.getItem(GAS_URL_STORAGE_KEY) || '';
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function loadLocalState() {
+      let saved = null;
+      try {
+        let raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          saved = JSON.parse(raw);
+        } else {
+          // Из старых версий переносим ручные и оплаченные счета
+          raw = OLD_STORAGE_KEYS.map((k) => localStorage.getItem(k)).find(Boolean);
+          if (raw) {
+            saved = JSON.parse(raw);
+            saved.activeBills = saved.activeBills.filter((b) => String(b.id).startsWith('custom-'));
+          }
+        }
+      } catch (e) {}
+
+      if (saved && Array.isArray(saved.activeBills) && Array.isArray(saved.paidSessionBills)) {
+        const limit = Date.now() - PAID_KEEP_DAYS * 86400000;
+        activeBills = saved.activeBills.map(normalizeBill).filter(Boolean);
+        paidSessionBills = saved.paidSessionBills
+          .map(normalizeBill)
+          .filter(Boolean)
+          .map((b) => ({ ...b, paidAt: b.paidAt || Date.now() }))
+          .filter((b) => b.paidAt > limit);
+        syncMeta = saved.syncMeta || {};
+      } else {
+        activeBills = JSON.parse(JSON.stringify(fallbackBills));
+        paidSessionBills = [];
+      }
+      saveLocalState();
+    }
+
+    function saveLocalState() {
+      try {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ activeBills, paidSessionBills, syncMeta })
+        );
+      } catch (e) {}
+    }
+
+    function renderSyncMeta() {
+      const { periodStart, updatedAt, duplicatesCount, reviewCount } = syncMeta;
+      if (periodStart && updatedAt) {
+        document.getElementById('header-subtitle').textContent =
+          `Период: с ${periodStart} · Обновлено ${updatedAt}`;
+        document.getElementById('footer-period').textContent = `с ${periodStart}`;
+      }
+      if (typeof duplicatesCount === 'number') {
+        document.getElementById('footer-duplicates').textContent =
+          duplicatesCount > 0 ? String(duplicatesCount) : 'Не найдены';
+      }
+      if (typeof reviewCount === 'number') {
+        document.getElementById('footer-review').textContent = String(reviewCount);
+      }
+    }
+
+    // Запрос к скрипту. Сохраняет параметры, уже имеющиеся в URL (например, key)
+    async function apiCall(params) {
+      const url = new URL(getGasApiUrl());
+      Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 60000);
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        const res = await response.json();
+        if (!res || !res.ok) throw new Error((res && res.error) || 'Ошибка ответа скрипта');
+        return res;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function mergeBills(incoming) {
+      const invoiceKey = (b) => `${b.provider}|${b.invoiceNumber}`;
+      const paidIds = new Set(paidSessionBills.map((b) => b.messageId).filter(Boolean));
+      // Счета без письма (стартовые и ручные) сверяем по поставщику и номеру
+      const paidKeys = new Set(paidSessionBills.filter((b) => !b.messageId).map(invoiceKey));
+      const fromGmail = incoming
+        .map(normalizeBill)
+        .filter(Boolean)
+        .filter((b) => !paidIds.has(b.messageId) && !paidKeys.has(invoiceKey(b)));
+      const gmailKeys = new Set(fromGmail.map(invoiceKey));
+      const manual = activeBills.filter(
+        (b) => b.id.startsWith('custom-') && !gmailKeys.has(invoiceKey(b))
+      );
+      return [...fromGmail, ...manual];
+    }
+
+    async function syncFromGmail() {
+      if (!getGasApiUrl()) {
+        openGasModal();
+        showToast('Укажите URL скрипта');
+        return;
+      }
+      if (isSyncing) return;
+      if (pendingIds.size > 0) {
+        showToast('Дождитесь сохранения отметки в Gmail');
+        return;
+      }
+
+      const syncIcon = document.getElementById('sync-icon');
+      const syncBtn = document.getElementById('sync-gmail-btn');
+      isSyncing = true;
+      syncBtn.disabled = true;
+      if (syncIcon) syncIcon.classList.add('animate-spin');
+      updateConnectionStatus('syncing', 'Проверка Gmail...');
+
+      try {
+        const res = await apiCall({ action: 'fetch', t: Date.now() });
+        if (!Array.isArray(res.bills)) throw new Error('Некорректный ответ API');
+        const skipped = res.bills.filter((b) => !normalizeBill(b)).length;
+        activeBills = mergeBills(res.bills);
+        currentReferenceDate = res.currentDateIso || todayIso();
+        syncMeta = {
+          periodStart: res.periodStart,
+          updatedAt: res.updatedAt,
+          duplicatesCount: res.duplicatesCount,
+          reviewCount: (Number(res.reviewCount) || 0) + skipped,
+        };
+        saveLocalState();
+        renderSyncMeta();
+        updateConnectionStatus('connected', 'Gmail подключён');
+        renderDashboard();
+        showToast(`Неоплаченных счетов: ${activeBills.length}`);
+      } catch (err) {
+        updateConnectionStatus('preview', 'Ошибка подключения');
+        showToast(`Ошибка: ${(err && err.message) || 'проверьте доступ скрипта'}`);
+      } finally {
+        isSyncing = false;
+        syncBtn.disabled = false;
+        if (syncIcon) syncIcon.classList.remove('animate-spin');
+      }
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastText = document.getElementById('toast-text');
+      toastText.textContent = message;
+
+      toast.classList.remove('opacity-0', 'translate-y-2');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-2');
+      }, 2400);
+    }
+
+    async function copyViitenumber(viitenumber, btnEl) {
+      const copied = await copyTextToClipboard(viitenumber);
+      if (!copied) {
+        showToast('Не удалось скопировать, выделите номер вручную');
+        return;
+      }
+      showToast(`Viitenumber ${viitenumber} скопирован`);
+
+      const labelEl = btnEl && btnEl.querySelector('.copy-label');
+      if (labelEl) {
+        labelEl.textContent = 'Скопировано';
+        setTimeout(() => {
+          labelEl.textContent = 'Копировать';
+        }, 1500);
+      }
+    }
+
+    function moveBill(billId, toPaid) {
+      const from = toPaid ? activeBills : paidSessionBills;
+      const idx = from.findIndex((b) => b.id === billId);
+      if (idx === -1) return null;
+      const [bill] = from.splice(idx, 1);
+      if (toPaid) {
+        paidSessionBills.push({ ...bill, paidAt: Date.now() });
+      } else {
+        const { paidAt, ...restored } = bill;
+        activeBills.push(restored);
+      }
+      saveLocalState();
+      return bill;
+    }
+
+    async function changePaidState(billId, toPaid) {
+      if (isSyncing || pendingIds.has(billId)) {
+        showToast('Подождите, идёт обмен с Gmail');
+        return;
+      }
+      const bill = moveBill(billId, toPaid);
+      if (!bill) return;
+
+      const useGmail = Boolean(getGasApiUrl() && bill.messageId);
+      if (useGmail) pendingIds.add(billId);
+      renderDashboard();
+
+      const done = toPaid ? `Оплачено: ${bill.provider}` : `Счёт ${bill.provider} возвращён`;
+      if (!useGmail) {
+        showToast(done);
+        return;
+      }
+
+      showToast('Сохраняю в Gmail...');
+      try {
+        await apiCall({ action: toPaid ? 'markPaid' : 'unmarkPaid', messageId: bill.messageId });
+        showToast(done);
+      } catch (err) {
+        // Откат: Gmail не подтвердил изменение
+        moveBill(billId, !toPaid);
+        showToast('Gmail не подтвердил изменение, действие отменено');
+      } finally {
+        pendingIds.delete(billId);
+        renderDashboard();
+      }
+    }
+
+    function markAsPaid(billId) {
+      return changePaidState(billId, true);
+    }
+
+    function undoPaid(billId) {
+      return changePaidState(billId, false);
+    }
+
+    function openGasModal() {
+      const input = document.getElementById('gas-url-input');
+      if (input) input.value = getGasApiUrl();
+      document.getElementById('gas-code-modal').classList.remove('hidden');
+    }
+
+    function closeGasModal() {
+      document.getElementById('gas-code-modal').classList.add('hidden');
+    }
+
+    function saveGasUrl(event) {
+      event.preventDefault();
+      const input = document.getElementById('gas-url-input');
+      const val = String(input.value || '').trim();
+      if (!val) return;
+      try {
+        localStorage.setItem(GAS_URL_STORAGE_KEY, val);
+      } catch (e) {}
+      closeGasModal();
+      syncFromGmail();
+    }
+
+    function openAddModal() {
+      document.getElementById('add-bill-modal').classList.remove('hidden');
+      document.getElementById('bill-provider').focus();
+    }
+
+    function closeAddModal() {
+      document.getElementById('add-bill-modal').classList.add('hidden');
+      document.getElementById('add-bill-form').reset();
+    }
+
+    function handleAddBillSubmit(event) {
+      event.preventDefault();
+      const categoryId = document.getElementById('bill-category').value;
+      const amount = parseFloat(document.getElementById('bill-amount').value);
+      const provider = document.getElementById('bill-provider').value.trim();
+      const invoiceNumber = document.getElementById('bill-number').value.trim();
+      const dueRaw = document.getElementById('bill-due').value;
+      const viitenumber = document.getElementById('bill-viitenumber').value.trim() || '—';
+      const objectText = document.getElementById('bill-object').value.trim() || 'не указан в письме';
+
+      if (!provider || !invoiceNumber || isNaN(amount) || amount <= 0) {
+        showToast('Заполните поставщика, номер счёта и сумму');
+        return;
+      }
+
+      let dueDate = null;
+      let dueSort = null;
+      let metaText = 'добавлен вручную';
+
+      if (dueRaw) {
+        const [y, m, d] = dueRaw.split('-');
+        dueDate = `${d}.${m}.${y}`;
+        dueSort = dueRaw;
+        metaText = `срок оплаты: ${dueDate}`;
+      }
+
+      activeBills.push({
+        id: `custom-${Date.now()}`,
+        messageId: null,
+        categoryId,
+        provider,
+        invoiceNumber,
+        metaText,
+        dueDate,
+        dueSort,
+        objectText,
+        viitenumber,
+        amount: Math.round(amount * 100) / 100,
+      });
+
+      collapsedCategories.delete(categoryId);
+      saveLocalState();
+      closeAddModal();
+      renderDashboard();
+      showToast(`Счёт ${provider} добавлен`);
+    }
+
+    function handleSearchInput(val) {
+      searchQuery = String(val || '').trim().toLowerCase();
+      renderCategories();
+    }
+
+    function toggleOverdueFilter() {
+      onlyOverdueFilter = !onlyOverdueFilter;
+      const btn = document.getElementById('filter-overdue-btn');
+      if (onlyOverdueFilter) {
+        btn.classList.remove('border-slate-200', 'bg-slate-50', 'text-slate-700');
+        btn.classList.add('border-red-300', 'bg-red-50', 'text-red-800');
+      } else {
+        btn.classList.remove('border-red-300', 'bg-red-50', 'text-red-800');
+        btn.classList.add('border-slate-200', 'bg-slate-50', 'text-slate-700');
+      }
+      renderCategories();
+    }
+
+    function toggleAllCategories() {
+      const visibleCategories = categoriesConfig.filter((cat) =>
+        getFilteredBills().some((b) => b.categoryId === cat.id)
+      );
+      const anyCollapsed = visibleCategories.some((cat) => collapsedCategories.has(cat.id));
+
+      if (anyCollapsed) {
+        visibleCategories.forEach((cat) => collapsedCategories.delete(cat.id));
+      } else {
+        visibleCategories.forEach((cat) => collapsedCategories.add(cat.id));
+      }
+      renderCategories();
+    }
+
+    function getFilteredBills() {
+      return activeBills.filter((bill) => {
+        if (onlyOverdueFilter && !isBillOverdue(bill, currentReferenceDate)) {
+          return false;
+        }
+        if (searchQuery) {
+          const haystack = [
+            bill.provider,
+            bill.invoiceNumber,
+            bill.objectText || '',
+            bill.viitenumber || '',
+            bill.metaText || '',
+          ]
+            .join(' ')
+            .toLowerCase();
+          if (!haystack.includes(searchQuery)) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+
+    function updateKPIs() {
+      const activeCents = activeBills.reduce((sum, b) => sum + Math.round(b.amount * 100), 0);
+      const sessionCents = paidSessionBills.reduce((sum, b) => sum + Math.round(b.amount * 100), 0);
+      const totalAllCents = activeCents + sessionCents;
+      const totalAllCount = activeBills.length + paidSessionBills.length;
+
+      document.getElementById('kpi-total-amount').textContent = formatEuro(activeCents / 100);
+      document.getElementById('kpi-unpaid-count').textContent = String(activeBills.length);
+
+      const overdueBills = activeBills.filter((b) => isBillOverdue(b, currentReferenceDate));
+      const overdueHintEl = document.getElementById('kpi-overdue-hint');
+      if (overdueHintEl) {
+        overdueHintEl.textContent =
+          overdueBills.length > 0
+            ? `Просрочено: ${pluralizeBills(overdueBills.length)}`
+            : 'Просроченных счетов нет';
+      }
+
+      const billsWithDue = activeBills
+        .filter((b) => Boolean(b.dueSort))
+        .sort((a, b) => a.dueSort.localeCompare(b.dueSort));
+
+      const nearestDueEl = document.getElementById('kpi-nearest-due');
+      const nearestCardEl = document.getElementById('kpi-nearest-card');
+      const hasOverdueActive = overdueBills.length > 0;
+
+      if (billsWithDue.length > 0) {
+        nearestDueEl.textContent = billsWithDue[0].dueDate;
+      } else if (activeBills.length > 0) {
+        nearestDueEl.textContent = 'Не указан';
+      } else {
+        nearestDueEl.textContent = 'Нет счетов';
+      }
+
+      if (nearestCardEl) {
+        const nearestMismatchOrOverdue =
+          hasOverdueActive || (billsWithDue.length > 0 && billsWithDue[0].dueSort !== currentReferenceDate);
+        if (nearestMismatchOrOverdue && hasOverdueActive) {
+          nearestCardEl.classList.add('kpi-nearest-overdue');
+        } else {
+          nearestCardEl.classList.remove('kpi-nearest-overdue');
+        }
+      }
+
+      document.getElementById('kpi-session-summary').textContent =
+        `Недавно оплачено: ${pluralizeBills(paidSessionBills.length)} (${formatEuro(sessionCents / 100)})`;
+
+      const footerTotalEl = document.getElementById('footer-total-bills');
+      if (footerTotalEl) {
+        footerTotalEl.textContent = `${totalAllCount} на ${formatEuro(totalAllCents / 100)}`;
+      }
+    }
+
+    function toggleCategory(categoryId) {
+      if (collapsedCategories.has(categoryId)) {
+        collapsedCategories.delete(categoryId);
+      } else {
+        collapsedCategories.add(categoryId);
+      }
+      renderCategories();
+    }
+
+    function renderCategories() {
+      const container = document.getElementById('categories-container');
+      const emptyState = document.getElementById('empty-state');
+      const emptyTitle = document.getElementById('empty-state-title');
+      const emptyDesc = document.getElementById('empty-state-desc');
+      const toggleAllBtn = document.getElementById('toggle-all-btn');
+
+      const filteredBills = getFilteredBills();
+
+      if (filteredBills.length === 0) {
+        container.innerHTML = '';
+        container.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+
+        if (activeBills.length > 0) {
+          emptyTitle.textContent = 'По выбранному фильтру счетов не найдено';
+          emptyDesc.textContent = 'Измените поисковый запрос или отключите фильтр «Только просроченные».';
+        } else {
+          emptyTitle.textContent = 'Все счета за текущий месяц оплачены';
+          emptyDesc.textContent = 'Письма отмечены меткой «Оплачено» в Gmail.';
+        }
+        return;
+      }
+
+      container.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+
+      let html = '';
+      let visibleCatCount = 0;
+      let collapsedVisibleCount = 0;
+
+      categoriesConfig.forEach((cat) => {
+        const items = filteredBills.filter((b) => b.categoryId === cat.id);
+        if (items.length === 0) return;
+
+        visibleCatCount++;
+        const catCents = items.reduce((sum, b) => sum + Math.round(b.amount * 100), 0);
+        const isCollapsed = searchQuery ? false : collapsedCategories.has(cat.id);
+        if (isCollapsed) collapsedVisibleCount++;
+
+        const catHasOverdue = items.some((b) => isBillOverdue(b, currentReferenceDate));
+
+        html += `
+          <section aria-label="${cat.title}" class="rounded-2xl bg-white border ${catHasOverdue ? 'border-red-200/90' : 'border-slate-200/90'} p-4 sm:p-5 animate-fade-up">
+            <button
+              type="button"
+              aria-expanded="${!isCollapsed}"
+              onclick="toggleCategory('${cat.id}')"
+              class="w-full flex flex-wrap items-center justify-between gap-2 text-left cursor-pointer select-none group"
+            >
+              <div class="flex items-center gap-2.5">
+                <svg
+                  class="w-4 h-4 text-slate-500 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : 'rotate-0'}"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+                <h2 class="text-base sm:text-lg font-bold text-slate-900 group-hover:text-slate-700 transition-colors">${cat.title}</h2>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 tabular-nums">
+                  ${pluralizeBills(items.length)}
+                </span>
+                ${catHasOverdue ? `
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-800 border border-red-200">
+                    просрочен
+                  </span>
+                ` : ''}
+              </div>
+              <div class="text-sm sm:text-base font-bold text-slate-900 tabular-nums">
+                ${formatEuro(catCents / 100)}
+              </div>
+            </button>
+
+            <div class="${isCollapsed ? 'hidden' : 'space-y-3 mt-4 pt-3.5 border-t border-slate-100'}">
+              ${items.map((bill) => renderBillCard(bill)).join('')}
+            </div>
+          </section>
+        `;
+      });
+
+      container.innerHTML = html;
+
+      // При поиске все категории раскрыты, поэтому кнопка неактивна
+      toggleAllBtn.disabled = Boolean(searchQuery);
+      toggleAllBtn.classList.toggle('opacity-50', Boolean(searchQuery));
+
+      if (toggleAllBtn && visibleCatCount > 0) {
+        toggleAllBtn.innerHTML = `<span>${collapsedVisibleCount > 0 ? 'Развернуть все' : 'Свернуть все'}</span>`;
+      }
+    }
+
+    function renderBillCard(bill) {
+      const overdue = isBillOverdue(bill, currentReferenceDate);
+      const cardThemeClass = overdue
+        ? 'bill-card-overdue'
+        : 'bg-slate-50/75 border-slate-200/85 hover:border-slate-300';
+      const objectLabel = bill.objectText && String(bill.objectText).trim()
+        ? bill.objectText
+        : 'не указан в письме';
+
+      return `
+        <article id="bill-card-${esc(bill.id)}" class="bill-card rounded-xl border p-4 transition-colors ${cardThemeClass}">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="space-y-1.5 min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="text-sm sm:text-base font-bold text-slate-900">${esc(bill.provider)}</h3>
+                <span class="text-xs font-medium text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+                  счёт № ${esc(bill.invoiceNumber)}
+                </span>
+                ${bill.dueDate ? `
+                  <span class="text-xs font-semibold ${overdue ? 'text-red-800 bg-red-100/90 border-red-300' : 'text-amber-800 bg-amber-50 border-amber-200/90'} border px-2 py-0.5 rounded-md">
+                    срок оплаты: ${esc(bill.dueDate)}${overdue ? ' · просрочен' : ''}
+                  </span>
+                ` : ''}
+              </div>
+
+              <p class="text-xs sm:text-sm text-slate-600">
+                ${esc(bill.metaText)}
+              </p>
+
+              <p class="text-xs sm:text-sm text-slate-800 leading-relaxed bg-white/75 border border-slate-200/70 rounded-lg px-2.5 py-1">
+                <span class="font-semibold text-slate-600">объект:</span> ${esc(objectLabel)}
+              </p>
+
+              ${bill.viitenumber && bill.viitenumber !== '—' ? `
+                <div class="pt-1 flex flex-wrap items-center gap-2">
+                  <span class="text-xs text-slate-500">viitenumber:</span>
+                  <code class="text-xs font-semibold text-slate-900 bg-white border border-slate-200 px-2.5 py-0.5 rounded-md select-all">${esc(bill.viitenumber)}</code>
+                  <button
+                    type="button"
+                    data-value="${esc(bill.viitenumber)}"
+                    onclick="copyViitenumber(this.dataset.value, this)"
+                    class="inline-flex items-center gap-1 text-xs font-medium text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+                  >
+                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span class="copy-label">Копировать</span>
+                  </button>
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="flex sm:flex-row md:flex-col items-center md:items-end justify-between gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-slate-200/75 shrink-0">
+              <div class="text-lg sm:text-xl font-bold text-slate-900 tabular-nums">
+                ${formatEuro(bill.amount)}
+              </div>
+              <button
+                type="button"
+                data-id="${esc(bill.id)}"
+              ${pendingIds.has(bill.id) ? 'disabled' : ''}
+              onclick="markAsPaid(this.dataset.id)"
+                class="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-[#fef9c3] text-[#854d0e] border border-[#fde047] hover:bg-[#fef08a] active:scale-[0.98] transition-all cursor-pointer"
+              >
+                Оплачено
+              </button>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderSessionPaidPanel() {
+      const panel = document.getElementById('session-paid-panel');
+      const list = document.getElementById('session-paid-list');
+      const badge = document.getElementById('session-paid-badge');
+
+      if (paidSessionBills.length === 0) {
+        panel.classList.add('hidden');
+        list.innerHTML = '';
+        return;
+      }
+
+      panel.classList.remove('hidden');
+      badge.textContent = String(paidSessionBills.length);
+
+      list.innerHTML = paidSessionBills
+        .map(
+          (bill) => `
+          <li class="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-semibold text-slate-800 line-through decoration-slate-400">${esc(bill.provider)}</span>
+              <span class="text-slate-500">счёт № ${esc(bill.invoiceNumber)}</span>
+              <span class="font-bold text-slate-900 tabular-nums">${formatEuro(bill.amount)}</span>
+            </div>
+            <button
+              type="button"
+              data-id="${esc(bill.id)}"
+              ${pendingIds.has(bill.id) ? 'disabled' : ''}
+              onclick="undoPaid(this.dataset.id)"
+              class="self-start sm:self-auto inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+            >
+              <span>Отменить</span>
+            </button>
+          </li>
+        `
+        )
+        .join('');
+    }
+
+    function renderDashboard() {
+      updateKPIs();
+      renderCategories();
+      renderSessionPaidPanel();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeAddModal();
+        closeGasModal();
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadLocalState();
+      renderSyncMeta();
+      renderDashboard();
+
+      // Если вкладка открыта несколько дней, обновляем дату для расчёта просрочки
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && todayIso() > currentReferenceDate) {
+          currentReferenceDate = todayIso();
+          renderDashboard();
+        }
+      });
+
+      if (getGasApiUrl()) {
+        updateConnectionStatus('connected', 'Gmail подключён');
+        syncFromGmail();
+      } else {
+        updateConnectionStatus('preview', 'Укажите URL скрипта');
+      }
+
+      if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+    });
+  </script>
+</body>
+</html>
