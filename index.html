@@ -98,129 +98,6 @@
     </div>
   </div>
 
-  <!-- Модальное окно добавления счёта вручную -->
-  <div
-    id="add-bill-modal"
-    class="hidden fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-0 sm:p-4"
-    role="dialog"
-    aria-modal="true"
-  >
-    <div class="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl border border-slate-200 shadow-2xl p-5 sm:p-6 space-y-4 animate-fade-up max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <h2 class="text-lg font-bold text-slate-900">Добавить счёт вручную</h2>
-        <button
-          type="button"
-          onclick="closeAddModal()"
-          aria-label="Закрыть"
-          class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <form id="add-bill-form" onsubmit="handleAddBillSubmit(event)" class="space-y-3.5">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          <div>
-            <label for="bill-category" class="block text-xs font-semibold text-slate-700 mb-1">Категория *</label>
-            <select
-              id="bill-category"
-              required
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
-            >
-              <option value="electricity">⚡ Электричество</option>
-              <option value="telecom">📱 Связь и интернет</option>
-              <option value="insurance">🛡️ Страховка</option>
-              <option value="other">🧾 Другие счета</option>
-            </select>
-          </div>
-          <div>
-            <label for="bill-amount" class="block text-xs font-semibold text-slate-700 mb-1">Сумма (€) *</label>
-            <input
-              id="bill-amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              required
-              placeholder="0.00"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 tabular-nums focus:bg-white focus:border-blue-400 focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          <div>
-            <label for="bill-provider" class="block text-xs font-semibold text-slate-700 mb-1">Поставщик *</label>
-            <input
-              id="bill-provider"
-              type="text"
-              required
-              placeholder="Например, Enefit OÜ"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label for="bill-number" class="block text-xs font-semibold text-slate-700 mb-1">Номер счёта *</label>
-            <input
-              id="bill-number"
-              type="text"
-              required
-              placeholder="Например, 123456789"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          <div>
-            <label for="bill-due" class="block text-xs font-semibold text-slate-700 mb-1">Срок оплаты</label>
-            <input
-              id="bill-due"
-              type="date"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label for="bill-viitenumber" class="block text-xs font-semibold text-slate-700 mb-1">Viitenumber</label>
-            <input
-              id="bill-viitenumber"
-              type="text"
-              placeholder="Номер ссылки"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label for="bill-object" class="block text-xs font-semibold text-slate-700 mb-1">Объект или описание</label>
-          <input
-            id="bill-object"
-            type="text"
-            placeholder="Адрес, договор или назначение платежа"
-            class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-blue-400 focus:outline-none"
-          />
-        </div>
-
-        <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-          <button
-            type="button"
-            onclick="closeAddModal()"
-            class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
-          >
-            Отмена
-          </button>
-          <button
-            type="submit"
-            class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            Сохранить
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- Модальное окно подключения URL скрипта -->
   <div
     id="gas-code-modal"
@@ -314,17 +191,6 @@
 
         <button
           type="button"
-          onclick="openAddModal()"
-          class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer"
-        >
-          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          <span>Добавить</span>
-        </button>
-
-        <button
-          type="button"
           onclick="openGasModal()"
           class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100/80 transition-all cursor-pointer"
         >
@@ -391,7 +257,7 @@
           id="search-input"
           type="search"
           oninput="handleSearchInput(this.value)"
-          placeholder="Поиск по поставщику, номеру счёта, адресу или viitenumber..."
+          placeholder="Поиск по поставщику, номеру счёта или объекту..."
           class="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3.5 py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-400 focus:outline-none"
         />
       </div>
@@ -464,8 +330,6 @@
     </footer>
 
   </div>
-
-  <textarea id="clipboard-helper" class="fixed -top-96 left-0 opacity-0 pointer-events-none" aria-hidden="true"></textarea>
 
   <script>
     const GAS_URL_STORAGE_KEY = 'personal_bills_gas_endpoint_url';
@@ -541,28 +405,6 @@
       };
     }
 
-    function legacyCopy(text) {
-      const helper = document.getElementById('clipboard-helper');
-      if (!helper) return false;
-      helper.value = text;
-      helper.select();
-      helper.setSelectionRange(0, 99999);
-      try {
-        return document.execCommand('copy');
-      } catch (e) {
-        return false;
-      }
-    }
-
-    async function copyTextToClipboard(text) {
-      try {
-        await navigator.clipboard.writeText(text);
-        return true;
-      } catch (e) {
-        return legacyCopy(text);
-      }
-    }
-
     function updateConnectionStatus(state, labelText) {
       const badge = document.getElementById('connection-badge');
       const dot = document.getElementById('connection-dot');
@@ -604,7 +446,7 @@
           raw = OLD_STORAGE_KEYS.map((k) => localStorage.getItem(k)).find(Boolean);
           if (raw) {
             saved = JSON.parse(raw);
-            saved.activeBills = saved.activeBills.filter((b) => String(b.id).startsWith('custom-'));
+            saved.activeBills = [];
           }
         }
       } catch (e) {}
@@ -622,6 +464,10 @@
         activeBills = JSON.parse(JSON.stringify(fallbackBills));
         paidSessionBills = [];
       }
+      // Ручное добавление убрано: прежние ручные счета удаляются
+      const notManual = (b) => !b.id.startsWith('custom-');
+      activeBills = activeBills.filter(notManual);
+      paidSessionBills = paidSessionBills.filter(notManual);
       saveLocalState();
     }
 
@@ -669,17 +515,13 @@
     function mergeBills(incoming) {
       const invoiceKey = (b) => `${b.provider}|${b.invoiceNumber}`;
       const paidIds = new Set(paidSessionBills.map((b) => b.messageId).filter(Boolean));
-      // Счета без письма (стартовые и ручные) сверяем по поставщику и номеру
+      // Счета без письма сверяем по поставщику и номеру
       const paidKeys = new Set(paidSessionBills.filter((b) => !b.messageId).map(invoiceKey));
       const fromGmail = incoming
         .map(normalizeBill)
         .filter(Boolean)
         .filter((b) => !paidIds.has(b.messageId) && !paidKeys.has(invoiceKey(b)));
-      const gmailKeys = new Set(fromGmail.map(invoiceKey));
-      const manual = activeBills.filter(
-        (b) => b.id.startsWith('custom-') && !gmailKeys.has(invoiceKey(b))
-      );
-      return [...fromGmail, ...manual];
+      return fromGmail;
     }
 
     async function syncFromGmail() {
@@ -741,23 +583,6 @@
         toast.classList.remove('opacity-100', 'translate-y-0');
         toast.classList.add('opacity-0', 'translate-y-2');
       }, 2400);
-    }
-
-    async function copyViitenumber(viitenumber, btnEl) {
-      const copied = await copyTextToClipboard(viitenumber);
-      if (!copied) {
-        showToast('Не удалось скопировать, выделите номер вручную');
-        return;
-      }
-      showToast(`Viitenumber ${viitenumber} скопирован`);
-
-      const labelEl = btnEl && btnEl.querySelector('.copy-label');
-      if (labelEl) {
-        labelEl.textContent = 'Скопировано';
-        setTimeout(() => {
-          labelEl.textContent = 'Копировать';
-        }, 1500);
-      }
     }
 
     function moveBill(billId, toPaid) {
@@ -837,63 +662,6 @@
       syncFromGmail();
     }
 
-    function openAddModal() {
-      document.getElementById('add-bill-modal').classList.remove('hidden');
-      document.getElementById('bill-provider').focus();
-    }
-
-    function closeAddModal() {
-      document.getElementById('add-bill-modal').classList.add('hidden');
-      document.getElementById('add-bill-form').reset();
-    }
-
-    function handleAddBillSubmit(event) {
-      event.preventDefault();
-      const categoryId = document.getElementById('bill-category').value;
-      const amount = parseFloat(document.getElementById('bill-amount').value);
-      const provider = document.getElementById('bill-provider').value.trim();
-      const invoiceNumber = document.getElementById('bill-number').value.trim();
-      const dueRaw = document.getElementById('bill-due').value;
-      const viitenumber = document.getElementById('bill-viitenumber').value.trim() || '—';
-      const objectText = document.getElementById('bill-object').value.trim() || 'не указан в письме';
-
-      if (!provider || !invoiceNumber || isNaN(amount) || amount <= 0) {
-        showToast('Заполните поставщика, номер счёта и сумму');
-        return;
-      }
-
-      let dueDate = null;
-      let dueSort = null;
-      let metaText = 'добавлен вручную';
-
-      if (dueRaw) {
-        const [y, m, d] = dueRaw.split('-');
-        dueDate = `${d}.${m}.${y}`;
-        dueSort = dueRaw;
-        metaText = `срок оплаты: ${dueDate}`;
-      }
-
-      activeBills.push({
-        id: `custom-${Date.now()}`,
-        messageId: null,
-        categoryId,
-        provider,
-        invoiceNumber,
-        metaText,
-        dueDate,
-        dueSort,
-        objectText,
-        viitenumber,
-        amount: Math.round(amount * 100) / 100,
-      });
-
-      collapsedCategories.delete(categoryId);
-      saveLocalState();
-      closeAddModal();
-      renderDashboard();
-      showToast(`Счёт ${provider} добавлен`);
-    }
-
     function handleSearchInput(val) {
       searchQuery = String(val || '').trim().toLowerCase();
       renderCategories();
@@ -936,7 +704,6 @@
             bill.provider,
             bill.invoiceNumber,
             bill.objectText || '',
-            bill.viitenumber || '',
             bill.metaText || '',
           ]
             .join(' ')
@@ -1137,25 +904,7 @@
                 <span class="font-semibold text-slate-600">объект:</span> ${esc(objectLabel)}
               </p>
 
-              ${bill.viitenumber && bill.viitenumber !== '—' ? `
-                <div class="pt-1 flex flex-wrap items-center gap-2">
-                  <span class="text-xs text-slate-500">viitenumber:</span>
-                  <code class="text-xs font-semibold text-slate-900 bg-white border border-slate-200 px-2.5 py-0.5 rounded-md select-all">${esc(bill.viitenumber)}</code>
-                  <button
-                    type="button"
-                    data-value="${esc(bill.viitenumber)}"
-                    onclick="copyViitenumber(this.dataset.value, this)"
-                    class="inline-flex items-center gap-1 text-xs font-medium text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
-                  >
-                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                    <span class="copy-label">Копировать</span>
-                  </button>
-                </div>
-              ` : ''}
-            </div>
+                          </div>
 
             <div class="flex sm:flex-row md:flex-col items-center md:items-end justify-between gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-slate-200/75 shrink-0">
               <div class="text-lg sm:text-xl font-bold text-slate-900 tabular-nums">
@@ -1222,7 +971,6 @@
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        closeAddModal();
         closeGasModal();
       }
     });
