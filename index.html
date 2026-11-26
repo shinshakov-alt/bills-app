@@ -246,22 +246,8 @@
       </div>
     </section>
 
-    <!-- Поиск и фильтры -->
-    <section aria-label="Поиск и фильтры" class="rounded-2xl bg-white border border-slate-200/90 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-      <div class="relative flex-1 min-w-0">
-        <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="M21 21l-4.35-4.35"></path>
-        </svg>
-        <input
-          id="search-input"
-          type="search"
-          oninput="handleSearchInput(this.value)"
-          placeholder="Поиск по поставщику, номеру счёта или объекту..."
-          class="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3.5 py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-400 focus:outline-none"
-        />
-      </div>
-
+    <!-- Фильтры -->
+    <section aria-label="Фильтры" class="rounded-2xl bg-white border border-slate-200/90 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div class="flex items-center gap-2 shrink-0">
         <button
           id="filter-overdue-btn"
@@ -662,11 +648,6 @@
       syncFromGmail();
     }
 
-    function handleSearchInput(val) {
-      searchQuery = String(val || '').trim().toLowerCase();
-      renderCategories();
-    }
-
     function toggleOverdueFilter() {
       onlyOverdueFilter = !onlyOverdueFilter;
       const btn = document.getElementById('filter-overdue-btn');
@@ -826,11 +807,11 @@
               type="button"
               aria-expanded="${!isCollapsed}"
               onclick="toggleCategory('${cat.id}')"
-              class="w-full flex flex-wrap items-center justify-between gap-2 text-left cursor-pointer select-none group"
+              class="w-full flex items-center justify-between gap-3 text-left cursor-pointer select-none group"
             >
-              <div class="flex items-center gap-2.5">
+              <div class="flex items-center gap-2.5 min-w-0">
                 <svg
-                  class="w-4 h-4 text-slate-500 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : 'rotate-0'}"
+                  class="w-4 h-4 shrink-0 text-slate-500 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : 'rotate-0'}"
                   fill="none"
                   stroke="currentColor"
                   stroke-width="2.2"
@@ -838,17 +819,21 @@
                 >
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
+                <div class="min-w-0">
                 <h2 class="text-base sm:text-lg font-bold text-slate-900 group-hover:text-slate-700 transition-colors">${cat.title}</h2>
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 tabular-nums">
+                <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                <span class="inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 tabular-nums">
                   ${pluralizeBills(items.length)}
                 </span>
                 ${catHasOverdue ? `
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-800 border border-red-200">
+                  <span class="inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-800 border border-red-200">
                     просрочен
                   </span>
                 ` : ''}
+                </div>
+                </div>
               </div>
-              <div class="text-sm sm:text-base font-bold text-slate-900 tabular-nums">
+              <div class="shrink-0 whitespace-nowrap text-sm sm:text-base font-bold text-slate-900 tabular-nums">
                 ${formatEuro(catCents / 100)}
               </div>
             </button>
@@ -895,11 +880,6 @@
                   </span>
                 ` : ''}
               </div>
-
-              <p class="text-xs sm:text-sm text-slate-600">
-                ${esc(bill.metaText)}
-              </p>
-
               <p class="text-xs sm:text-sm text-slate-800 leading-relaxed bg-white/75 border border-slate-200/70 rounded-lg px-2.5 py-1">
                 <span class="font-semibold text-slate-600">объект:</span> ${esc(objectLabel)}
               </p>

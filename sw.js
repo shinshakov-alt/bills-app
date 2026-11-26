@@ -1,5 +1,5 @@
 // При изменении списка файлов увеличьте номер версии
-const CACHE = 'scheta-v6';
+const CACHE = 'scheta-v7';
 const SHELL = [
   './',
   './index.html',
